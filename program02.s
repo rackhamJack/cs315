@@ -1,6 +1,5 @@
 ###########################################################
 #		Program Description
-modded
 ###########################################################
 #		Register Usage
 #	$t0
@@ -18,6 +17,7 @@ modded
 array:      .word 0 # holds the pointer to the array
 length:     .word 0 # holds the size of the array
 array_sum:  .word 0 # holds the sum of the array
+read_over_p: .asciiz "read array has exited"
 ###########################################################
 		.text
 main:
@@ -27,18 +27,29 @@ jal allocate_array
 la $t9 array
 sw $v0 0($t9)
 la $t9 length
-sw $v0 0($t9)
+sw $v1 0($t9)
 
+#call read_array
 la $t9 array
 lw $a0 0($t9)
-la $t9 0($t9)
-lw $a0 0($t9)
+la $t9 length
+lw $a1 0($t9)
 jal read_array
 la $t9 array_sum
 sw $v0 0($t9)
 
+li $v0 4
+la $a0 read_over_p
+syscall
+
+#call print_array
 la $t9 array
 lw $a0 0($t9)
+la $t9 length
+lw $a1 0($t9)
+jal print_array
+
+#call
 
 
 
@@ -62,13 +73,13 @@ lw $a0 0($t9)
 #	$v1 size of the new array
 ###########################################################
 #		Register Usage
-#	$t0 holds tmp input size
-#	$t1 holds base address for array
+#	$t0 
+#	$t1 holds base array length
 ############################################################
 		.data
 
 allocate_array_prompt_p:  .asciiz "please input a valid length (n>0): "
-allocate_error_p:         .asciiz "Ivalid Length!/n"
+allocate_error_p:         .asciiz "Ivalid Length!\n"
 
 ###########################################################
 		.text
@@ -86,10 +97,10 @@ syscall
 
 blez $v0, error
 
-move $t0,  $v0
+move $t1,  $v0
 
 li $v0 9
-sll $a0, $t0, 2
+sll $a0, $t1, 2
 syscall
 b end
 
@@ -100,7 +111,7 @@ syscall
 b inputLength
 
 end:
-move $t1, $v1
+move $v1, $t1
 
 	jr $ra	#return to calling location
 ###########################################################
@@ -123,18 +134,15 @@ move $t1, $v1
 #	$t1 length of array
 #	$t2 temp sum
 #	$t3 12
-#	$t4 
-#	$t5
-#	$t6
-#	$t7
-#	$t8
-#	$t9 temp register
+##	$t9 temp register
 ###########################################################
 		.data
-fill_array_prompt: .asciiz  "please enter a number that is noth nonnegative and divisible by 3 and 4"
-fill_error:        .asciiz  "Invalid entry"
+fill_array_prompt: .asciiz  "please enter a number that is noth nonnegative and divisible by 3 and 4: "
+fill_error:        .asciiz  "Invalid entry!\n"
 ###########################################################
 		.text
+read_array:
+
 move $t0, $a0
 move $t1, $a1
 li $t3, 12
@@ -143,24 +151,32 @@ li $t2, 0
 array_input:
 
 li $v0, 4
-la $a0 fill_array_promt
+la $a0 fill_array_prompt
 syscall
 
 li $v0, 5
 syscall
 
-blez $v0, error
- 
+#data validation
+blez $v0, fillError
 rem $t9, $v0, $t3
-bnez $t9, error
+bnez $t9, fillError
 
 add $t2, $t2, $v0
 sw $v0, 0($t0)
 addi $t0, $t0, 4
 addi $t1, $t1, -1
 
-beqz $t0, readEnd
+bnez $t1, array_input
+b readEnd
+
+fillError:
+
+li $v0 4
+la $a0 fill_error
+syscall
 b array_input
+
 
 readEnd:
 move $v0, $t2
@@ -192,6 +208,8 @@ print_array_heading:  .asciiz "array printed backwards \n"
 
 ###########################################################
 		.text
+print_array:
+
 move $t0, $a0
 move $t1, $a0
 li $t6, 4
